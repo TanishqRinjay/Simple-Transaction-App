@@ -11,6 +11,13 @@ const signUpSchema = zod.object({
     firstName: zod.string().max(20),
     lastName: zod.string().max(20),
 });
+
+// Login Schema:
+const loginSchema = zod.object({
+    username: zod.string().min(3).max(30),
+    password: zod.string().min(6),
+})
+
 router.post("/signup", async (req, res) => {
     try {
         const { success } = signUpSchema.parse(req.body);
@@ -41,5 +48,36 @@ router.post("/signup", async (req, res) => {
         });
     }
 });
+
+router.post("/login", async (req, res) => {
+    try{
+        const body = req.body;
+        const {success} = loginSchema.parse(body);
+        if(!success) {
+            throw new Error("Validation Error, please enter correct inputs");
+        }
+        const user = await User.findOne({username: body.username});
+        if(!user) {
+            throw new Error("User not found");
+        }
+        if(user.password !== body.password) {
+            throw new Error("Invalid Password");
+        }
+        const token = jwt.sign(
+            {
+                id: user._id,
+            },
+            process.env.JWT_SECRET
+        );
+        res.status(200).json({
+            message: "User logged in successfully",
+            token: token,
+        });
+    }catch(err) {
+        res.status(500).json({
+            message: err.message,
+        });
+    }
+})
 
 module.exports = router;
